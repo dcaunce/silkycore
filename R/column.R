@@ -39,7 +39,10 @@ Cell <- R6Class(
 )
 
 Column <- R6Class("Column",
-    private = list(
+    private=list(
+        .name="",
+        .title="",
+        .cells = list(),
         .format = "",
         .width = 0,
         .measures=list(),
@@ -47,23 +50,32 @@ Column <- R6Class("Column",
         .contentExpr=".",
         .visibleExpr="TRUE",
         .options=NULL),
-    public = list(
-        .name="",
-        .title="",
-        .cells = list(),
+    active=list(
+        name=function() private$.name,
+        title=function() private$.title,
+        cells=function() private$.cells,
+        width=function() {
+            if ( ! private$.measured)
+                self$.measure()
+            private$.width
+        },
+        visible=function() {
+            private$.options$eval(private$.visibleExpr)
+        }),
+    public=list(
         initialize=function(name, title=name, content=".", visible=TRUE, options=Options()) {
-            self$.name <- name
-            self$.title <- title
+            private$.name <- name
+            private$.title <- title
             
             private$.measured <- FALSE
-            self$.cells <- list()
+            private$.cells <- list()
             
             private$.visibleExpr <- paste0(visible)
             private$.contentExpr <- content
             
             private$.options <- options
         },
-        .addCell=function(value=NA, ...) {
+        addCell=function(value=NA, ...) {
             
             if (is.na(value))
                 value <- private$.options$eval(private$.contentExpr, ...)
@@ -73,50 +85,42 @@ Column <- R6Class("Column",
             else
                 cell <- Cell$new(value)
             
-            self$.cells[[length(self$.cells)+1]] <- cell
+            private$.cells[[length(private$.cells)+1]] <- cell
             private$.measured <- FALSE
         },
-        .setCell=function(row, value) {
-            if (row > length(self$.cells))
+        setCell=function(row, value) {
+            if (row > length(private$.cells))
                 stop(format("Row '{}' does not exist in the table", row), call.=FALSE)
-            self$.cells[[row]]$setValue(value)
+            private$.cells[[row]]$setValue(value)
             private$.measured <- FALSE
         },
-        .getCell=function(row) {
-            if (row > length(self$.cells))
+        getCell=function(row) {
+            if (row > length(private$.cells))
                 stop(format("Row '{}' does not exist in the table", row), call.=FALSE)
-            self$.cells[[row]]
+            private$.cells[[row]]
         },
-        .clear=function() {
-            self$.cells <- list()
+        clear=function() {
+            private$.cells <- list()
             private$.measured <- FALSE
         },
-        .addSup=function(row, sup) {
-            self$.cells[[row]]$addSup(sup)
+        addSup=function(row, sup) {
+            private$.cells[[row]]$addSup(sup)
             private$.measured <- FALSE
         },
         .measure=function() {
-            titleWidth <- nchar(self$.title)
-            private$.measures <- silkyMeasureElements(self$.cells)
+            titleWidth <- nchar(private$.title)
+            private$.measures <- silkyMeasureElements(private$.cells)
             private$.width <- max(private$.measures$width, titleWidth)
             private$.measured <- TRUE
-        },
-        width=function() {
-            if ( ! private$.measured)
-                self$.measure()
-            private$.width
-        },
-        visible=function() {
-            private$.options$eval(private$.visibleExpr)
         },
         .titleForPrint=function(width=NULL) {
             
             if (is.null(width))
-                width <- self$width()
-            w <- nchar(self$.title)
+                width <- self$width
+            w <- nchar(private$.title)
             pad <- spaces(max(0, width - w))
             
-            paste0(self$.title, pad)
+            paste0(private$.title, pad)
         },
         .cellForPrint=function(i, measures=NULL, width=NA) {
             if ( ! private$.measured)
@@ -128,7 +132,7 @@ Column <- R6Class("Column",
             if ( ! is.na(width))
                 measures$width <- width
             
-            silkyFormatElement(self$.cells[[i]],
+            silkyFormatElement(private$.cells[[i]],
                 w=measures$width,
                 dp=measures$dp,
                 sf=measures$sf,
@@ -139,11 +143,11 @@ Column <- R6Class("Column",
             initProtoBuf()
             
             column <- RProtoBuf::new(silkycoms.ResultsColumn,
-                name=self$.name,
-                title=self$.title,
+            name=private$.name,
+                title=private$.title,
                 format=private$.format)
             
-            for (cell in self$.cells)
+            for (cell in private$.cells)
                 column$add("cells", cell$asProtoBuf())
             
             column

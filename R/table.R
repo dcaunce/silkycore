@@ -46,8 +46,8 @@ Table <- R6Class("Table",
                 
                 w <- 0
                 for (column in private$.columns) {
-                    if (column$visible())
-                        w <- w + private$.padding + column$width() + private$.padding
+                    if (column$visible)
+                        w <- w + private$.padding + column$width + private$.padding
                 }
                 
             } else {
@@ -162,7 +162,7 @@ Table <- R6Class("Table",
         clearRows=function() {
             private$.rowNames <- list()
             for (column in private$.columns)
-                column$.clear()
+                column$clear()
             private$.rowCount <- 0
             private$.footnotes$clear()
         },
@@ -173,7 +173,7 @@ Table <- R6Class("Table",
             
             while (i <= private$.rowCount) {
                 rowName <- private$.rowNames[[i]]
-                column$.addCell(name=rowName, index=i)
+                column$addCell(name=rowName, index=i)
                 i <- i + 1
             }
             
@@ -185,23 +185,23 @@ Table <- R6Class("Table",
             private$.rowCount <- private$.rowCount + 1
             
             for (column in private$.columns) {
-                if (column$.name %in% names(values))
-                    column$.addCell(values[[column$.name]], name=name, index=private$.rowCount)
+                if (column$name %in% names(values))
+                    column$addCell(values[[column$name]], name=name, index=private$.rowCount)
                 else
-                    column$.addCell(name=name, index=private$.rowCount)
+                    column$addCell(name=name, index=private$.rowCount)
             }
         },
         rowCount=function() {
             private$.rowCount
         },
         setCell=function(rowNo, col, value) {
-            private$.columns[[col]]$.setCell(rowNo, value)
+            private$.columns[[col]]$setCell(rowNo, value)
         },
         getCell=function(rowNo, col) {
             column <- private$.columns[[col]]
             if (is.null(column))
                 stop(format("Column '{}' does not exist in the table", col), call.=FALSE)
-            column$.getCell(rowNo)
+            column$getCell(rowNo)
         },
         getRows=function() {
             
@@ -230,13 +230,13 @@ Table <- R6Class("Table",
                 stop(format("Row '{}' does not exist in the table", row), call.=FALSE)
             
             for (column in private$.columns)
-                v[[column$.name]] <- column$.getCell(rowNo)
+                v[[column$name]] <- column$getCell(rowNo)
             
             v
         },
         addFootnote=function(rowNo, colNo, note) {
             index <- private$.footnotes$addNote(note)
-            private$.columns[[colNo]]$.addSup(rowNo, index)
+            private$.columns[[colNo]]$addSup(rowNo, index)
         },
         .widthWidestCellInRow=function(row) {
             
@@ -244,8 +244,8 @@ Table <- R6Class("Table",
             maxSupInRow <- 0  # widest superscripts
             
             for (column in private$.columns) {
-                if (column$visible()) {
-                    cell <- column$.getCell(row)
+                if (column$visible) {
+                    cell <- column$getCell(row)
                     measurements <- silkyMeasureElements(list(cell))
                     widthWOSup <- measurements$width - measurements$supwidth
                     maxWidthWOSup <- max(maxWidthWOSup, widthWOSup)
@@ -259,8 +259,8 @@ Table <- R6Class("Table",
             width <- 0
             
             for (column in private$.columns) {
-                if (column$visible())
-                    width <- max(width, nchar(column$.title))
+                if (column$visible)
+                    width <- max(width, nchar(column$title))
             }
             
             width
@@ -283,7 +283,7 @@ Table <- R6Class("Table",
                 for (i in seq_along(private$.columns)) {
                     if (i == 1)
                         next()  # the first is already printed in the header
-                    if (private$.columns[[i]]$visible())
+                    if (private$.columns[[i]]$visible)
                         pieces <- c(pieces, self$.rowForPrint(i))
                 }
             }
@@ -317,7 +317,7 @@ Table <- R6Class("Table",
             if ( ! private$.swapRowsColumns) {
             
                 for (column in private$.columns) {
-                    if (column$visible())
+                    if (column$visible)
                         pieces <- c(pieces, private$.padstr, column$.titleForPrint(), private$.padstr)
                 }
                 
@@ -328,7 +328,7 @@ Table <- R6Class("Table",
                 pieces <- c(pieces, private$.padstr, spaces(self$.widthWidestHeader()), private$.padstr)
                 
                 for (i in seq_len(private$.rowCount)) {
-                    text <- paste(column$.getCell(i)$value)
+                    text <- paste(column$getCell(i)$value)
                     rowWidth <- self$.widthWidestCellInRow(i)$width
                     w <- nchar(text)
                     pad <- spaces(max(0, rowWidth - w))
@@ -358,8 +358,8 @@ Table <- R6Class("Table",
                 supVisible <- FALSE
                 
                 for (column in private$.columns) {
-                    if (column$visible()) {
-                        for (cell in column$.cells) {
+                    if (column$visible) {
+                        for (cell in column$cells) {
                             if ((i-1) %in% cell$sups) {
                                 supVisible <- TRUE
                                 break()
@@ -404,8 +404,8 @@ Table <- R6Class("Table",
             if ( ! private$.swapRowsColumns) {
             
                 for (column in private$.columns) {
-                    if (column$visible()) {
-                        width <- column$width()
+                    if (column$visible) {
+                        width <- column$width
                         pieces <- c(pieces, private$.padstr, column$.cellForPrint(i, width=width), private$.padstr)
                     }
                 }
@@ -418,12 +418,12 @@ Table <- R6Class("Table",
                 
                 pieces <- c(pieces, private$.padstr, column$.titleForPrint(width), private$.padstr)
                 
-                for (j in seq_along(column$.cells)) {
+                for (j in seq_along(column$cells)) {
                     widest <- self$.widthWidestCellInRow(j)
                     width <- widest$width
                     supwidth <- widest$supwidth
                     
-                    cell <- column$.cells[[j]]
+                    cell <- column$cells[[j]]
                     measurements <- silkyMeasureElements(list(cell))
                     measurements$width <- max(measurements$width, width)
                     measurements$supwidth  <- supwidth
@@ -446,8 +446,8 @@ Table <- R6Class("Table",
                 table$add("columns", column$asProtoBuf())
     
             element <- RProtoBuf::new(silkycoms.ResultsElement,
-                name=.name,
-                title=.title,
+                name=private$.name,
+                title=self$title,
                 table=table)
             
             element

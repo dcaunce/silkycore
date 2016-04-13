@@ -99,28 +99,6 @@ cap1st <- function(s) {
     paste0(toupper(substring(s,1,1)), substring(s, 2))
 }
 
-setter <- function(s) {
-    paste0("set", cap1st(s))
-}
-
-formatFromEnv <- function(str, env, context="normal") {
-    
-    matches <- gregexpr("\\{[a-zA-Z]+\\}", str)[[1]]
-    
-    if (matches[1] > 0) {
-        
-        for (i in seq_along(matches)) {
-            
-            name <- substring(str, matches[i] + 1, matches[i] + attr(matches, "match.length")[i]-2)
-            
-            if (name %in% names(env))
-                str <- gsub(paste0("{", name, "}"), stringify(env[[name]], context), str, fixed=TRUE)
-        }
-    }
-    
-    str
-}
-
 format <- function(str, ..., context="normal") {
 
     args <- list(...)
