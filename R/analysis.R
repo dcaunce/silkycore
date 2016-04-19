@@ -6,15 +6,20 @@ Analysis <- R6Class("Analysis",
         .package="",
         .options=NA,
         .results=NA,
-        .inited=FALSE,
+        .status="none",
+        .init=function() NULL,
+        .run=function() NULL,
+        .state=NA,
         read=NA),
     active=list(
         id=function() private$.id,
         name=function() private$.name,
         options=function() private$.options,
-        results=function() private$.results),
+        results=function() private$.results,
+        status=function() private$.status,
+        state=function() private$.state),
     public=list(
-        initialize=function(package, name, id=0, options=NULL) {
+        initialize=function(package, name, id=0, options=NULL, state=NULL) {
             
             private$.package <- package
             private$.name    <- name
@@ -22,10 +27,15 @@ Analysis <- R6Class("Analysis",
             private$.id <- id
             
             if (is.null(options))
-                options <- Options()
+                options <- Options$new()
             private$.options <- options
             
-            private$.results <- silkycore::Results$new(package, name, options)
+            if (is.null(state))
+                state <- State$new()
+            private$.state <- state
+            
+            info <- loadResultsInfo(package, name)
+            private$.results <- silkycore::Results$new(info, options)
             
             private$.options$addChangeListener(private$.optionsChangedHandler)
         },
@@ -33,15 +43,21 @@ Analysis <- R6Class("Analysis",
             silkycore::check(private$.package, private$.name, private$.options)
         },
         init=function() {
-            if (private$.inited)
+            if (private$.status != "none")
                 return()
             
             self$check()
             self$results$.update()
-            private$.inited <- TRUE
+            
+            private$.init()
+            
+            private$.status <- "inited"
         },
         run=function() {
             self$init()
+            private$.status <- "running"
+            private$.run()
+            private$.status <- "complete"
         },
         print=function() {
             self$init()
@@ -68,7 +84,7 @@ Analysis <- R6Class("Analysis",
             self$options$set(dataset=private$read(columns))
         },
         optionsChangedHandler=function(optionNames) {
-            private$.inited <- FALSE
+            private$.status <- "none"
         },
         asProtoBuf=function() {
             
@@ -78,7 +94,17 @@ Analysis <- R6Class("Analysis",
             response <- RProtoBuf::new(silkycoms.AnalysisResponse)
             response$id = self$id
             response$results <- self$results$asProtoBuf();
-            response$status <- silkycoms.AnalysisStatus$ANALYSIS_COMPLETE
+            
+            if (private$.status == "inited") {
+                response$status <- silkycoms.AnalysisStatus$ANALYSIS_INITED;
+            } else if (private$.status == "running") {
+                response$status <- silkycoms.AnalysisStatus$ANALYSIS_RUNNING;
+            } else if (private$.status == "complete") {
+                response$status <- silkycoms.AnalysisStatus$ANALYSIS_COMPLETE;
+            } else {
+                response$status <- silkycoms.AnalysisStatus$ANALYSIS_ERROR;
+            }
+            
             response
         })
 )

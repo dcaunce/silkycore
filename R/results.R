@@ -70,20 +70,18 @@ Results <- R6Class("Results",
         .elements=list(),
         .options=NA),
     public=list(
-        initialize=function(package=NULL, name=NULL, options=NULL) {
+        initialize=function(defs=NULL, options=NULL) {
             
             if (is.null(options))
                 options <- Options$new()
             private$.options <- options
-            
-            if (is.null(package) == FALSE && is.null(name) == FALSE) {
-                
-                info <- loadResultsInfo(package, name)
 
-                if ( ! is.null(info$title))
-                    private$.title <- info$title
+            if ( ! is.null(defs)) {
                 
-                for (def in info$results) {
+                if ( ! is.null(defs$title))
+                    private$.title <- defs$title
+                
+                for (def in defs$results) {
                     type <- make.names(def$type)  # we run an eval, so we have to sanitize the names
                     name <- make.names(def$name)
                     element <- eval(parse(text=format("{type}$new('{name}', options=private$.options)", type=type, name=name)))
