@@ -22,15 +22,15 @@ Cell <- R6Class(
             
             if (vc == "integer") {
                 if (self$value == -2147483647)
-                    cell$o <- silkycoms.Cell.Other.MISSING
+                    cell$o <- silkycoms.ResultsCell.Other.MISSING
                 else
                     cell$i <- self$value
             } else if (vc == "numeric")
                 cell$d <- self$value
-            else if (vc == "")
+            else if (vc == "character")
                 cell$s <- self$value
             else
-                cell$o <- silkycoms.Cell.Other$NOT_A_NUMBER
+                cell$o <- silkycoms.ResultsCell.Other$NOT_A_NUMBER
             
             cell$footnotes <- self$sups
             

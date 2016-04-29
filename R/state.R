@@ -62,11 +62,11 @@ State <- R6Class(
         removeValue=function(name) {
             private$.values[[name]] <- NULL
         },
-        .serialize=function() {
-            base::serialize(self$.toList(), connection=NULL)
+        .serialize=function(conn=NULL) {
+            base::serialize(self$.toList(), connection=conn)
         },
-        .deserialize=function(s) {
-            v <- base::unserialize(connection=s)
+        .deserialize=function(conn) {
+            v <- base::unserialize(connection=conn)
             self$.fromList(v)
             invisible(self)
         },
@@ -98,8 +98,20 @@ State <- R6Class(
             private$.childrenExpr <- expr
             private$.updated <- FALSE
         },
-        .setDef=function(defn) {
-            
+        .setup=function(def) {
+            for (name in names(def)) {
+                value <- def[[name]]
+                self$.setDef(name, value)
+            }
+        },
+        .has=function(name) {
+            paste0(".", name) %in% names(private)
+        },
+        .setDef=function(name, value) {
+            if (self$.has(name)) {
+                private[[paste0(".", name)]] <- value
+                private$.updated <- FALSE
+            }
         },
         .update=function() {
             if (private$.updated)

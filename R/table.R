@@ -30,9 +30,9 @@ Table <- R6Class("Table",
     private=list(
         .columns=list(),
         .rowCount=0,
+        .rowKeys=character(),
         .rowNames=character(),
         .rowsExpr="0",
-        .rowsValue="0",
         .margin=1,
         .padding=2,
         .marstr=" ",
@@ -61,16 +61,16 @@ Table <- R6Class("Table",
         }
     ),
     public=list(
-        initialize=function(name="", index=0, options=Options(), swapRowsColumns=FALSE) {
+        initialize=function(key="", index=0, options=Options(), swapRowsColumns=FALSE) {
             
-            super$initialize(name=name, options=options)
+            super$initialize(key=key, options=options)
             
             private$.index <- as.integer(index)
             private$.swapRowsColumns <- swapRowsColumns
             private$.columns <- list()
             private$.rowCount <- 0
             private$.rowsExpr <- "1"
-            private$.rowNames <- list()
+            private$.rowKeys <- list()
             private$.margin <- 1
             private$.marstr <- spaces(private$.margin)
             private$.padding <- 2
@@ -112,47 +112,45 @@ Table <- R6Class("Table",
                 return()
             
             error <- NULL
-
-            rowsValue <- try(private$.options$eval(private$.rowsExpr, name=private$.name, index=private$.index), silent=TRUE)
             
-            if (inherits(rowsValue, "try-error")) {
-                error <- rowsValue
-                rowsValue <- 0
+            newKeys <- try(private$.options$eval(private$.rowsExpr, key=private$.key, name=private$.name, index=private$.index), silent=TRUE)
+            
+            if (inherits(newKeys, "try-error")) {
+                error <- newKeys
+                newKeys <- character()
+            } else if (is.character(newKeys)) {
+                # all good
+            } else if (is.numeric(newKeys) && newKeys[1] > 0) {
+                newKeys <- paste(1:newKeys)
+            } else {
+                newKeys <- character()
             }
             
-            if (identical(rowsValue, private$.rowsValue))
+            if (identical(newKeys, private$.rowKeys))
                 return()
             
-            private$.rowsValue <- rowsValue
-            
-            oldNames <- private$.rowNames
+            oldKeys <- private$.rowKeys
             oldRows <- self$getRows()
-            
-            if (is.numeric(private$.rowsValue) && private$.rowsValue > 0) {
-                newNames <- paste(1:private$.rowsValue)
-            } else if (is.character(private$.rowsValue)) {
-                newNames <- private$.rowsValue
-            } else {
-                newNames <- character()
-            }
             
             self$clearRows()
             
-            for (i in seq_along(newNames)) {
+            for (i in seq_along(newKeys)) {
                 
-                newName <- newNames[[i]]
-                index <- which(oldNames == newName)
+                newKey <- newKeys[[i]]
+                index <- which(oldKeys == newKey)
                 
                 if (length(index) > 0) {
                     
                     newRow <- oldRows[[ index[1] ]]
-                    self$addRow(newName, newRow)
+                    self$addRow(newKey, newRow)
                     
                 } else {
                     
-                    self$addRow(newName)
+                    self$addRow(newKey)
                 }
             }
+            
+            private$.rowKeys <- newKeys
             
             if ( ! is.null(error))
                 rethrow(error)
@@ -160,7 +158,7 @@ Table <- R6Class("Table",
             private$.updated <- TRUE
         },
         clearRows=function() {
-            private$.rowNames <- list()
+            private$.rowKeys <- list()
             for (column in private$.columns)
                 column$clear()
             private$.rowCount <- 0
@@ -172,23 +170,23 @@ Table <- R6Class("Table",
             i <- 1
             
             while (i <= private$.rowCount) {
-                rowName <- private$.rowNames[[i]]
-                column$addCell(name=rowName, index=i)
+                rowKey <- private$.rowKeys[[i]]
+                column$addCell(name=rowKey, index=i)
                 i <- i + 1
             }
             
             private$.columns[[name]] <- column
         },
-        addRow=function(name=NULL, values=NULL) {
+        addRow=function(key=NULL, values=NULL) {
             
-            private$.rowNames[length(private$.rowNames)+1] <- list(name)
+            private$.rowKeys[length(private$.rowKeys)+1] <- list(key)
             private$.rowCount <- private$.rowCount + 1
             
             for (column in private$.columns) {
                 if (column$name %in% names(values))
-                    column$addCell(values[[column$name]], name=name, index=private$.rowCount)
+                    column$addCell(values[[column$name]], key=key, index=private$.rowCount)
                 else
-                    column$addCell(name=name, index=private$.rowCount)
+                    column$addCell(key=key, index=private$.rowCount)
             }
         },
         rowCount=function() {
@@ -217,7 +215,7 @@ Table <- R6Class("Table",
             v <- list()
             
             if (is.character(row)) {
-                rowNo <- match(row, private$.rowNames)
+                rowNo <- match(row, private$.rowKeys)
                 if (is.na(index))
                     stop(format("Row '{}' does not exist in the table", row), call.=FALSE)
             } else if (is.numeric(row)) {
@@ -454,132 +452,4 @@ Table <- R6Class("Table",
         }
     )
 )
-
-Tables <- R6Class("Tables",
-    inherit=ResultElement,
-    private=list(
-        .tables=NA,
-        .tableNames=NA,
-        .template=NA,
-        .tablesExpr="0",
-        .tablesValue=0),
-    public=list(
-        initialize=function(name="", index=0, options=Options()) {
-            super$initialize(name, index, options)
-        },
-        get=function(name) {
-            
-            index <- which(name == private$.tableNames)
-            if (length(index) > 0)
-                table <- private$.tables[[ index[1] ]]
-            else
-                table <- NULL
-            
-            table
-        },
-        .setDef=function(name, value) {
-            if (name == "tables")
-                self$.setTablesDef(value)
-            else if (name == "template")
-                self$.setTemplateDef(value)
-            else
-                super$.setDef(name, value)
-        },
-        .setTemplateDef=function(templateDef) {
-            private$.template <- templateDef
-            private$.updated <- FALSE
-        },
-        .setTablesDef=function(tablesExpr) {
-            private$.tablesExpr <- paste0(tablesExpr)
-            private$.updated <- FALSE
-        },
-        .update=function() {
-            
-            if (private$.updated)
-                return()
-
-            if (length(private$.template) == 0)
-                return()
-            
-            error <- NULL
-            
-            tablesValue <- try(private$.options$eval(private$.tablesExpr, name=private$.name, index=private$.index), silent=TRUE)
-            
-            if (inherits(tablesValue, "try-error")) {
-                error <- tablesValue
-                tablesValue <- 0
-            }
-            
-            private$.tablesValue <- tablesValue
-            
-            oldNames <- private$.tableNames
-            oldTables <- private$.tables
-            
-            if (is.numeric(private$.tablesValue) && private$.tablesValue > 0) {
-                newNames <- paste(1:private$.tablesValue)
-            } else if (is.character(private$.tablesValue)) {
-                newNames <- private$.tablesValue
-            } else {
-                newNames <- character()
-            }
-            
-            private$.tableNames <- newNames
-            private$.tables <- list()
-            
-            for (i in seq_along(newNames)) {
-                
-                newName <- newNames[[i]]
-                index <- which(oldNames == newName)
-                
-                if (length(index) > 0) {
-                    
-                    table <- oldTables[[ index[1] ]]
-                    table$.update()
-                    private$.tables[[i]] <- table
-                    
-                } else {
-                    
-                    table <- Table$new(newName, i, private$.options)
-                    table$.setup(private$.template)
-                    table$.update()
-                    private$.tables[[i]] <- table
-                }
-            }
-            
-            if ( ! is.null(error))
-                rethrow(error)
-            
-            private$.updated <- TRUE
-        },
-        clear=function() {
-            private$.tableNames <- character()
-            private$.tables <- list()
-        },
-        asString=function() {
-            
-            pieces <- c(' ', private$.title, '\n')
-            
-            for (table in private$.tables) {
-                if (table$visible)
-                    pieces <- c(pieces, table$asString())
-            }
-            
-            return(paste0(pieces, collapse=""))
-        },
-        asProtoBuf=function() {
-            initProtoBuf()
-            
-            group <- RProtoBuf::new(silkycoms.ResultsGroup)
-            
-            for (table in private$.tables)
-                group$add("elements", table$asProtoBuf())
-            
-            RProtoBuf::new(silkycoms.ResultsElement,
-                name=self$name,
-                title=self$title,
-                group=group)
-            
-        })
-)
-
 

@@ -14,7 +14,7 @@ columns <- list(
     list(
         name="var",
         title="Var",
-        content="(name)"
+        content="(key)"
     ),
     list(
         name="value",
@@ -28,7 +28,7 @@ table$.setDef("columns", columns)
 table$.update()
 
 table$.setDef("rows", "(notexist)")
-expect_error(table$.update(), "Error : Could not evaluate '(notexist)'\n    object 'notexist' not found\n", fixed=TRUE)
+expect_error(table$.update(), "Could not evaluate '(notexist)'\n    object 'notexist' not found", fixed=TRUE)
 table$.setDef("rows", "(vars)")
 expect_silent(table$.update())
 expect_equal(table$rowCount(), 3)
@@ -55,8 +55,8 @@ expect_equal(length(row), 2)
 expect_equal(row$var$value, "age")
 expect_equal(row$value$value, 16)
 
-expect_error(table$getCell(1, "doesnt-exist")$value, "Error : Column 'doesnt-exist' does not exist in the table", fixed=TRUE)
-expect_error(table$getCell(5, "var")$value, "Error : Row '5' does not exist in the table\n", fixed=TRUE)
+expect_error(table$getCell(1, "doesnt-exist")$value, "Column 'doesnt-exist' does not exist in the table", fixed=TRUE)
+expect_error(table$getCell(5, "var")$value, "Row '5' does not exist in the table", fixed=TRUE)
 
 options$set(vars=c("age", "gender", "ses"))
 
@@ -64,7 +64,7 @@ expect_equal(table$rowCount(), 3)
 
 # TABLES
 
-tables <- Tables$new(options=options)
+tables <- Group$new(options=options)
 tables$.setDef("tables", "(vars)")
 
 template <- list(

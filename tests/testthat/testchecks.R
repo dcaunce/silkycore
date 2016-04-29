@@ -6,9 +6,7 @@ expect_silky_error <- function(object, message, code=NULL) {
     expect_error(eval(quote(object)), message, fixed=TRUE)
 
     err <- try(eval(quote(object)), silent=TRUE)
-    expect_error(err)
     condition <- attr(err, "condition")
-    
     expect_equal(condition$code, code)
 }
 

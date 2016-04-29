@@ -2,6 +2,7 @@
 ResultElement <- R6Class("ResultElement",
     private=c(
         .name="",
+        .key=NA,
         .title="",
         .index=0,
         .visible="TRUE",
@@ -11,7 +12,7 @@ ResultElement <- R6Class("ResultElement",
         name=function() private$.name,
         options=function() private$.options,
         visible=function() {
-            vis <- private$.options$eval(private$.visible, name=private$.name, index=private$.index)
+            vis <- private$.options$eval(private$.visible, key=private$.key, name=private$.name, index=private$.index)
             if (is.logical(vis))
                 return(vis)
             else
@@ -20,15 +21,24 @@ ResultElement <- R6Class("ResultElement",
         title=function(value) {
             
             if (missing(value))
-                return(paste0(private$.options$eval(private$.title, name=private$.name, index=private$.index)))
+                return(paste0(private$.options$eval(private$.title, key=private$.key, name=private$.name, index=private$.index)))
             
             private$.title <- value
             invisible(self)
+        },
+        path=function() {
+            if ( ! is.na(self$.parent))
+                return(paste(self$.parent$path, self$name, sep="/"))
+            else
+                return(self$name)
         }),
     public=list(
-        initialize=function(name="", index=0, options=Options()) {
-            private$.name <- name
-            private$.title <- name
+        initialize=function(key="", index=0, options=Options()) {
+            
+            private$.key <- key
+            private$.name <- rjson::toJSON(key)
+            private$.title <- private$.name
+            
             private$.index <- as.integer(index)
             private$.options <- options
             private$.visible <- paste0(TRUE)
@@ -46,8 +56,10 @@ ResultElement <- R6Class("ResultElement",
             paste0(".", name) %in% names(private)
         },
         .setDef=function(name, value) {
-            if (self$.has(name))
+            if (self$.has(name)) {
                 private[[paste0(".", name)]] <- value
+                private$.updated <- FALSE
+            }
         },
         .setup=function(def) {
             
@@ -61,7 +73,8 @@ ResultElement <- R6Class("ResultElement",
         },
         print=function() {
             cat(self$asString())
-        }
+        },
+        .parent=NA
     ))
 
 Results <- R6Class("Results",
@@ -95,6 +108,7 @@ Results <- R6Class("Results",
                 element$.update()
         },
         append=function(element) {
+            element$.parent <- self
             private$.elements[[element$name]] <- element
         },
         get=function(name) {
@@ -121,24 +135,21 @@ Results <- R6Class("Results",
             
             initProtoBuf()
             
-            resultsBuf <- RProtoBuf::new(silkycoms.AnalysisResponse.Results)
+            group <- RProtoBuf::new(silkycoms.ResultsGroup)
             
             for (element in private$.elements) {
                 
                 if (element$visible == FALSE)
                     next()
                 
-                elem <- RProtoBuf::new(silkycoms.ResultsElement,
-                    name=element$name,
-                    title=element$title,
-                    status=silkycoms.AnalysisStatus$ANALYSIS_COMPLETE,
-                    text=element$asString())
-                
-                resultsBuf$add("elements", elem)
-                
-                #resultsBuf$add("elements", element$asProtoBuf())
+                group$add("elements", element$asProtoBuf())
             }
             
-            resultsBuf
+            results <- RProtoBuf::new(silkycoms.ResultsElement,
+                name=private$.name,
+                title=private$.title,
+                group=group)
+            
+            results
         })
 )

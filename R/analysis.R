@@ -10,7 +10,8 @@ Analysis <- R6Class("Analysis",
         .init=function() NULL,
         .run=function() NULL,
         .state=NA,
-        read=NA),
+        read=NA,
+        .statePath=NA),
     active=list(
         id=function() private$.id,
         name=function() private$.name,
@@ -49,6 +50,8 @@ Analysis <- R6Class("Analysis",
             self$check()
             self$results$.update()
             
+            #self$.readState()
+            
             private$.init()
             
             private$.status <- "inited"
@@ -58,13 +61,43 @@ Analysis <- R6Class("Analysis",
             private$.status <- "running"
             private$.run()
             private$.status <- "complete"
+            
+            #self$.saveState()
         },
         print=function() {
             self$init()
             self$results$print()
         },
-        .setReadDataset=function(read) {
+        .setReadDatasetSource=function(read) {
             private$read <- read
+        },
+        .setStatePathSource=function(statePath) {
+            private$.statePath <- statePath
+        },
+        .readState=function() {
+            
+            private$.state <- State$new()
+            
+            stateInfo <- loadStateInfo(private$.package, private$.name)
+            
+            try({
+                if (is.function(private$.statePath)) {
+                    statePath <- private$.statePath()
+                    if (base::file.exists(statePath)) {
+                        conn <- file(statePath, open="rb", raw=TRUE)
+                        private$.state$.deserialize(conn)
+                    }
+                }
+            })
+        },
+        .saveState=function() {
+            
+            if (is.function(private$.statePath)) {
+                statePath <- private$.statePath()
+                conn <- file(statePath, open="wb", raw=TRUE)
+                private$.state$.serialize(conn)
+                base::close(conn)
+            }
         },
         readDataset=function() {
 
