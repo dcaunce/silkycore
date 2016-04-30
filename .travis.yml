@@ -1,0 +1,15 @@
+
+language: r
+warnings_are_errors: false
+
+r:
+  - release
+  - devel
+
+r_packages:
+  - testthat
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libprotobuf-dev libprotoc-dev
+  

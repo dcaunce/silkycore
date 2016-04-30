@@ -9,3 +9,4 @@ Description: Allows you to make stuff really silky
 License: TBD
 Depends: R (>= 3.2)
 Imports: R6 (>= 1.0.1), RProtoBuf, yaml, rjson
+Suggests: testthat (>= 1.0.2)
