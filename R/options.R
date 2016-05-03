@@ -1,14 +1,22 @@
 
-Options <- R6Class(
+Options <- R6::R6Class(
     "Options",
     private=list(
         .options=NA,
         .listeners=NA),
     public=list(
-        initialize=function(json=NULL, ...) {
+        initialize=function(package=NULL, name=NULL, json=NULL, ...) {
             
             private$.options <- new.env()
             private$.listeners <- list()
+            
+            if (is.character(package) && is.character(name)) {
+                info <- loadAnalysisInfo(package, name)
+                for (option in info$options) {
+                    if ("default" %in% names(option) && "name" %in% names(option))
+                        private$.options[[option$name]] <- option$default
+                }
+            }
             
             if ( ! is.null(json)) {
                 opts <- rjson::fromJSON(json)
@@ -68,6 +76,15 @@ Options <- R6Class(
             
             for (listener in private$.listeners)
                 listener(names(values))
+        },
+        setValue=function(name, value) {
+            private$.options[[name]] <- value
+            
+            for (listener in private$.listeners)
+                listener(name)
+        },
+        get=function(name) {
+            private$.options[[name]]
         },
         levels=function(x) {
             str <- substitute(x)

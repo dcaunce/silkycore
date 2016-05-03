@@ -19,14 +19,22 @@ expect_equal(silkyFormatElement(15e7, w=10), "   1.50e+8")
 expect_equal(silkyFormatElement(-15e7, w=10, expw=4), " -1.50e +8")
 expect_equal(silkyFormatElement(0.8e-8, w=14, expw=8), "  8.00e     -9")
 
-expect_equal(silkyMeasureElements(0, sf=4), list(sf=4, dp=3, width=5, expwidth=3, supwidth=0))
-expect_equal(silkyMeasureElements(c(425, 70, 1), sf=4), list(sf=4, dp=3, width=7, expwidth=3, supwidth=0))
-expect_equal(silkyMeasureElements(c(1024, 70, 11), sf=4), list(sf=4, dp=2, width=7, expwidth=3, supwidth=0))
+expect_equal(silkyMeasureElements(0, sf=4), list(sf=4, dp=3, width=5, expwidth=0, supwidth=0))
+expect_equal(silkyMeasureElements(c(425, 70, 1), sf=4), list(sf=4, dp=3, width=7, expwidth=0, supwidth=0))
+expect_equal(silkyMeasureElements(c(1024, 70, 11), sf=4), list(sf=4, dp=2, width=7, expwidth=0, supwidth=0))
 expect_equal(silkyMeasureElements(c(1e8, -1e5), sf=4), list(sf=4, dp=0, width=8, expwidth=3, supwidth=0))
-expect_equal(silkyMeasureElements(c(1e5, 1), sf=4), list(sf=4, dp=3, width=10, expwidth=3, supwidth=0))
-expect_equal(silkyMeasureElements(c(1.1e-3, 1), sf=4), list(sf=4, dp=6, width=8, expwidth=3, supwidth=0))
+expect_equal(silkyMeasureElements(c(1e5, 1), sf=4), list(sf=4, dp=3, width=10, expwidth=0, supwidth=0))
+expect_equal(silkyMeasureElements(c(1.1e-3, 1), sf=4), list(sf=4, dp=6, width=8, expwidth=0, supwidth=0))
 
 expect_equal(silkyMeasureElements(c(-1.234e8, -6e66, 1), sf=4), list(sf=4, dp=3, width=10, expwidth=4, supwidth=0))
 expect_equal(silkyMeasureElements(-1.34e-57, sf=3), list(sf=3, dp=0, width=9, expwidth=4, supwidth=0))
+
+items <- c(1.855186e+10, -3.391637e+9, -7.788854e+9)
+measured <- silkyMeasureElements(items, sf=3)
+expect_equal(measured, list(sf=3, dp=0, width=9, expwidth=4, supwidth=0))
+expect_equal(silkyFormatElement(items[1], w=9, expw=4), " 1.86e+10")
+
+
+
 
 

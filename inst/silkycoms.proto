@@ -107,10 +107,10 @@ message CellsResponse {
 
 
 message AnalysisRequest {
-    optional int32 id = 1;
-    optional string name = 2;
-    optional string ns = 3;
-    optional string datasetId = 4;
+    optional string datasetId = 1;
+    optional int32 analysisId = 2;
+    optional string name = 3;
+    optional string ns = 4;
     
     enum Perform {
         INIT = 1;
@@ -132,11 +132,13 @@ enum AnalysisStatus {
 
 message AnalysisResponse {
 
-    optional int32 id = 1;
-    optional string options = 2;
-    optional ResultsElement results = 3;
-    optional AnalysisStatus status = 4;
-    optional bytes error = 5;
+    optional string datasetId = 1;
+    optional int32 analysisId = 2;
+    optional string options = 3;
+    optional ResultsElement results = 4;
+    optional AnalysisStatus status = 5;
+    optional bytes error = 6;
+
 }
 
 message ResultsCell {
@@ -166,15 +168,13 @@ message ResultsColumn {
 }
 
 message ResultsTable {
-    optional string name = 2;
-    repeated ResultsColumn columns = 4;
+    repeated ResultsColumn columns = 1;
 }
 
 message ResultsImage {
     optional string path = 1;
     optional int32 width = 2;
     optional int32 height = 3;
-
 }
 
 message ResultsElement {

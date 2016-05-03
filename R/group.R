@@ -11,6 +11,7 @@ Group <- R6Class("Group",
     public=list(
         initialize=function(name="", index=0, options=Options()) {
             super$initialize(name, index, options)
+            private$.items <- NULL
         },
         get=function(key) {
             

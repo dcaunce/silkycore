@@ -143,19 +143,40 @@ dotPos <- function(x) {
     floor(log10(x))
 }
 
+nDigits <- function(x, negSign=TRUE) {
+    
+    # calcs no. digits before the decimal point
+    
+    n <- 1
+    
+    if (x > 1) {
+        n <- base::floor(base::log10(x)) + 1
+    } else if (x < -1) {
+        n <- base::floor(base::log10(abs(x))) + 1
+    }
+    
+    if (x < 0 && negSign)
+        n <- n + 1
+    
+    n
+}
+
 silkyMeasureElements <- function(elems, sf=3, scl=1e-3, sch=1e7) {
     
+    # non-scientific
     dp <- 0
-    maxns <- 0   # max non-scientific value
+    maxns <- 0   # max
     minns <- 0
     
-    maxsexp <- 1  # max (abs) scientific exponent
-    maxsexps <- '+'  # max scientific exponent sign
-    maxsms <- '+' # max scientific mantissa sign
+    # scientific
+    maxexp <- 0  # max scientific exponent
+    minexp <- 0  # min scientific exponent
+    negman <- FALSE  # are any of the mantissas negative
     
+    # string
     maxstr <- 4
     
-    maxsupwidth <- 0
+    maxsupwidth <- 0  # max superscripts width
     
     for (elem in elems) {
         
@@ -168,11 +189,15 @@ silkyMeasureElements <- function(elems, sf=3, scl=1e-3, sch=1e7) {
         
         if (is.null(elem)) {
             
-            maxns <- 4
+            maxstr <- max(maxstr, 4)  # width of 'null'
             
         } else if (is.na(elem)) {
             
             # do nothing
+            
+        } else if (is.infinite(elem)) {
+            
+            maxstr <- max(maxstr, 4)  # width of '-Inf'
             
         } else if (inherits(elem, "character")) {
             
@@ -192,54 +217,51 @@ silkyMeasureElements <- function(elems, sf=3, scl=1e-3, sch=1e7) {
             
             dp <- max(dp, (sf - floor(log10(abs(elem))) - 1))
             
-            if (elem > maxns)
-                maxns <- elem
-            if (elem < minns)
-                minns <- elem
+            maxns <- max(maxns, elem)
+            minns <- min(minns, elem)
             
         } else {
             
             # scientific values
             
             exp <- floor(log10(abs(elem)))
-            if (abs(exp) > maxsexp) {
-                maxsexp <- abs(exp)
-                maxsms <- ifelse(elem >= 0, '+', '-')
-            }
+            man <- elem / (10 ^ exp)
             
+            maxexp <- max(maxexp, exp)
+            minexp <- min(minexp, exp)
+            if (man < 0)
+                negman <- TRUE
         }
         
         if (length(sups) > 0)
             maxsupwidth <- max(maxsupwidth, 1 + length(sups))
     }
     
-    if (maxns != 0 || minns != 0) {
-        
-        maxnsw <- max(1, floor(log10(maxns))+1)
-        minnsw <- max(1, floor(log10(abs(minns)))+1)
-        if (minns < 0)
-            minnsw = minnsw + 1  # for minus sign
-        
-        nswidth <- max(maxnsw, minnsw)
-        
-    } else {
-        nswidth <- 1
-    }
+    maxnsw <- nDigits(maxns)
+    minnsw <- nDigits(minns)
+    
+    nswidth <- max(maxnsw, minnsw)  # non-scientific width
         
     if (dp > 0)
         nswidth <- nswidth + 1 + dp # add a decimal point
     
-    swidth <- 0
-    if (maxsexp != 1)
-        swidth <- (sf+1) + (2 + floor(log10(maxsexp))+1)  # +3 is for the '.', 'e' and the +/-
-    if (maxsms == '-')
-        swidth <- swidth + 1
+    swidth <- 0  # scientific width
+    expwidth <- 0
+    
+    if (maxexp > 0 || minexp < 0) {
+    
+        expwidth <- max(nDigits(maxexp), nDigits(minexp, negSign=FALSE)) + 2  # +2 for the e and the sign
+        manwidth <- sf + 1  # sf + room for a decimal point
+        if (negman)
+            manwidth <- manwidth + 1  # add room for a minus sign
+            
+        swidth <- manwidth + expwidth
+    }
     
     width <- max(swidth, nswidth, maxstr)
-    
     width <- width + maxsupwidth
 
-    list(sf=sf, dp=dp, width=width, expwidth=(2 + floor(log10(maxsexp))+1), supwidth=maxsupwidth)
+    list(sf=sf, dp=dp, width=width, expwidth=expwidth, supwidth=maxsupwidth)
 }
 
 silkyFormatElement <- function(elem, w=NULL, expw=NULL, supw=0, dp=2, sf=3, scl=1e-3, sch=1e7) {
@@ -272,6 +294,13 @@ silkyFormatElement <- function(elem, w=NULL, expw=NULL, supw=0, dp=2, sf=3, scl=
             str <- ''
         else
             str <- repstr(' ', w)
+        
+    } else if (is.infinite(elem)) {
+        
+        if (elem > 0)
+            str <- "Inf"
+        else
+            str <- "-Inf"
         
     } else if (inherits(elem, "character")) {
         
@@ -307,9 +336,9 @@ silkyFormatElement <- function(elem, w=NULL, expw=NULL, supw=0, dp=2, sf=3, scl=
         expstr <- paste0('e', exppad, sign, expstr)
         
         if ( ! is.null(w))
-            manstr <- base::format(mantissa, width=w-nchar(expstr), nsmall=sf-1)
+            manstr <- base::formatC(x=mantissa, width=w-nchar(expstr), digits=sf-1, format="f")
         else
-            manstr <- base::format(mantissa, nsmall=sf-1)
+            manstr <- base::formatC(x=mantissa, digits=sf-1, format="f")
         
         str <- paste0(manstr, expstr)
     }

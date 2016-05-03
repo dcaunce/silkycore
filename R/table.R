@@ -61,7 +61,7 @@ Table <- R6Class("Table",
         }
     ),
     public=list(
-        initialize=function(key="", index=0, options=Options(), swapRowsColumns=FALSE) {
+        initialize=function(key="", index=0, options=Options$new(), swapRowsColumns=FALSE) {
             
             super$initialize(key=key, options=options)
             

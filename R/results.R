@@ -1,5 +1,5 @@
 
-ResultElement <- R6Class("ResultElement",
+ResultElement <- R6::R6Class("ResultElement",
     private=c(
         .name="",
         .key=NA,
@@ -27,13 +27,27 @@ ResultElement <- R6Class("ResultElement",
             invisible(self)
         },
         path=function() {
-            if ( ! is.na(self$.parent))
+            if ("ResultsElement" %in% class(self$.parent))
                 return(paste(self$.parent$path, self$name, sep="/"))
             else
                 return(self$name)
+        },
+        root=function() {
+            parent <- self
+            while ("ResultElement" %in% class(parent))
+                parent <- parent$.parent
+            parent
+        },
+        analysis=function() {
+            root <- self$root
+            if (base::identical(root, self))
+                analysis <- NULL
+            else
+                analysis <- root$analysis
+            analysis
         }),
     public=list(
-        initialize=function(key="", index=0, options=Options()) {
+        initialize=function(key="", index=0, options=Options$new()) {
             
             private$.key <- key
             private$.name <- rjson::toJSON(key)
@@ -48,6 +62,9 @@ ResultElement <- R6Class("ResultElement",
         },
         .update=function() {
             private$.updated <- TRUE
+        },
+        .render=function() {
+            
         },
         .optionsChanged=function(...) {
             private$.updated <- FALSE
@@ -81,13 +98,17 @@ Results <- R6Class("Results",
     private=list(
         .title="no title",
         .elements=list(),
-        .options=NA),
+        .options=NA,
+        .analysis=NA),
+    active=list(
+        analysis=function() private$.analysis),
     public=list(
-        initialize=function(defs=NULL, options=NULL) {
+        initialize=function(defs=NULL, options=NULL, analysis=NULL) {
             
             if (is.null(options))
                 options <- Options$new()
             private$.options <- options
+            private$.analysis <- analysis
 
             if ( ! is.null(defs)) {
                 
@@ -106,6 +127,12 @@ Results <- R6Class("Results",
         .update=function() {
             for (element in private$.elements)
                 element$.update()
+        },
+        .render=function() {
+            for (element in private$.elements) {
+                if (element$visible)
+                    element$.render()
+            }
         },
         append=function(element) {
             element$.parent <- self
